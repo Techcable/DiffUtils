@@ -68,7 +68,7 @@ def build_path(original, revised):
             prev = None
 
             # For some reason this works, but not the other ways
-            if (k == -d) or (k is not d and diagonal[kminus].i < diagonal[kplus].i):
+            if (k == -d) or (k != d and diagonal[kminus].i < diagonal[kplus].i):
                 i = diagonal[kplus].i
                 prev = diagonal[kplus]
             else:

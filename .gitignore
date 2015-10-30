@@ -1,3 +1,9 @@
 # IntelliJ
 .idea
 *.iml
+
+# Pip
+DiffUtils.egg-info
+
+# Python
+*.pyc
