@@ -221,10 +221,12 @@ class Snake(DiffNode):
         """
         super().__init__(i, j, None)
         self.prev = prev
-        self.lastSnake = self
 
     def is_snake(self):
         return True
+
+    def previous_snake(self):
+        return self
 
 
 def diff_chunks(original_chunk, new_chunk):

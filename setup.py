@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='DiffUtils',
-      version='1.0.1',
+      version='1.0.2-SNAPSHOT',
       description='A python diff/patch library based on java-diff-utils (https://code.google.com/p/java-diff-utils/)',
       author='Techcable',
       author_emails='Techcable@outlook.com',

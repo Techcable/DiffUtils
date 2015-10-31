@@ -32,8 +32,7 @@ changed_text = ["Once upon a time there was a snail named Bob",
                 "The police officer flew to the moon.",
                 "Then the moon police shot the earth police officer.",
                 "======",
-                "======",
-                "The End"]
+                "======"]
 
 
 class PatchTest(unittest.TestCase):
