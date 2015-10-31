@@ -167,8 +167,10 @@ class DiffNode:
         self.j = j
         if prev is None:
             self.prev = None
+            self.lastSnake = self
         else:
             self.prev = prev.previous_snake()
+            self.lastSnake = self.previous_snake()
 
     def is_snake(self):
         """
@@ -197,9 +199,10 @@ class DiffNode:
         """
         if self.is_bootstrap():
             return None
-        if not self.is_snake() and self.prev is not None:
-            return self.prev.previous_snake()
-        return self
+        elif self.prev is None:
+            return self
+        else:
+            return self.prev.lastSnake
 
 
 class Snake(DiffNode):
@@ -218,6 +221,7 @@ class Snake(DiffNode):
         """
         super().__init__(i, j, None)
         self.prev = prev
+        self.lastSnake = self
 
     def is_snake(self):
         return True

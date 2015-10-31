@@ -98,7 +98,7 @@ def parse_unified_diff(text):
                 new_chunk_lines.append(rest)
         for delta in myers.diff_chunks(Chunk(old_ln - 1, old_chunk_lines), Chunk(new_ln - 1, new_chunk_lines)):
             patch.add_delta(delta)
-        chunk.clear()
+        del chunk[:]
 
     for line in text:
         if in_prelude:
@@ -172,7 +172,7 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
                 delta_batch.append(next_delta)
             else:
                 result.extend(__process_deltas(original_lines, deltas, context_size))
-                delta_batch.clear()
+                del delta_batch[:]
                 delta_batch.append(next_delta)
             delta = next_delta
     # Process the last batch of deltas
