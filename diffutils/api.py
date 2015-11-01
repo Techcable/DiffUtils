@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import re
-from diffutils import myers
+from diffutils import myers, output
 from diffutils.core import *
 
 """The public API for DiffUtils"""
@@ -34,7 +34,10 @@ def diff(original, revised):
         original = original.splitlines()
     if isinstance(revised, str):
         original = original.splitlines()
-    return myers.diff(original, revised)
+    patch = myers.diff(original, revised)
+    if len(patch.get_deltas()) is 0:
+        return None
+    return patch
 
 
 def patch(original, patch):
@@ -140,7 +143,7 @@ def parse_unified_diff(text):
     return patch
 
 
-def generate_unified_diff(original_file, revised_file, original_lines, patch, context_size):
+def generate_unified_diff(original_file, revised_file, original_lines, patch, context_size=3):
     """
     Convert the patch into unified diff format
 
@@ -151,94 +154,4 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
     :param context_size: the number of context lines to put around each difference
     :return: the patch as a list of lines in unified diff format
     """
-    if isinstance(original_lines, str):
-        original_lines = original_lines.splitlines()
-    deltas = patch.get_deltas()  # patch.get_deltas() does a defensive copy, so lets make sure that is only done once
-    if len(deltas) is 0:
-        return list()  # There is nothing in the patch to output
-    result = list()
-    result.append("---" + original_file)
-    result.append("+++" + revised_file)
-
-    delta = deltas[0]
-    delta_batch = [delta]  # Deltas are batched together and are output together, to get rid of redundant context
-
-    if len(deltas) is not 1:
-        for i in range(1, len(deltas)):
-            position = delta.original.position
-            next_delta = deltas[i]
-
-            if position + len(delta.original.lines) + context_size >= next_delta.original.position - context_size:
-                delta_batch.append(next_delta)
-            else:
-                result.extend(__process_deltas(original_lines, deltas, context_size))
-                del delta_batch[:]
-                delta_batch.append(next_delta)
-            delta = next_delta
-    # Process the last batch of deltas
-    result.extend(__process_deltas(original_lines, delta_batch, context_size))
-    return result
-
-
-"""Utilities"""
-
-
-def __process_deltas(original_lines, deltas, context_size):
-    def add_delta_text(delta, buffer):
-        for line in delta.original.lines:
-            buffer.append("-" + line)
-        for line in delta.revised.lines:
-            buffer.append("+" + line)
-
-    buffer = list()
-    original_total = 0  # total lines output from original
-    revised_total = 0  # total lines output from revised
-
-    delta = deltas[0]
-
-    # +1 to overcome the 0-offset Position
-    original_start = delta.original.position + 1 - context_size
-    if original_start < 1:
-        original_start = 1
-
-    revised_start = delta.original.position + 1 - context_size
-    if revised_start < 1:
-        revised_start = 1
-
-    context_start = delta.original.position - context_size
-    if context_start < 0:
-        context_start = 0  # There are no lines before line 0
-
-    # Output the context before the first delta
-    for lineIndex in range(context_start, delta.original.position):
-        buffer.append(" " + original_lines[lineIndex])
-        original_total += 1
-        revised_total += 1
-
-    # Output the first delta
-    add_delta_text(delta, buffer)
-    original_total += len(delta.original.lines)
-    revised_total += len(delta.revised.lines)
-
-    for delta_index in range(1, len(deltas)):
-        next_delta = deltas[delta_index]
-        intermediate_start = delta.original.position + len(delta.original.lines)
-        for lineIndex in range(intermediate_start, next_delta.original.position):
-            buffer.append(" " + original_lines[lineIndex])
-            original_total += 1
-            revised_total += 1
-        add_delta_text(next_delta, buffer)
-        original_total += len(delta.original.lines)
-        revised_total += len(delta.revised.lines)
-        delta = next_delta
-
-    context_start = delta.original.position + len(delta.original.lines)
-    for lineIndex in range(context_start, min(context_start + context_size, len(original_lines))):
-        buffer.append(" " + original_lines[lineIndex])
-        original_total += 1
-        revised_total += 1
-
-    buffer.insert(0, "@@ -" + str(original_start) + "," + str(original_total) +
-                  " +" + str(revised_start) + "," + str(revised_total) + " @@")
-
-    return buffer
+    return output.generate_unified_diff(original_file, revised_file, original_lines, patch, context_size)
