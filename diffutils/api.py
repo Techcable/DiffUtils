@@ -92,13 +92,16 @@ def parse_unified_diff(text):
         old_chunk_lines = list()
         new_chunk_lines = list()
 
-        for raw_line in chunk:
-            tag = raw_line[0]
-            rest = raw_line[1]
-            if tag is ' ' or tag is '-':
-                old_chunk_lines.append(rest)
-            if tag is ' ' or tag is '+':
+        for line in chunk:
+            tag = line[:1]
+            rest = line[1:]
+            if tag == ' ':
                 new_chunk_lines.append(rest)
+                old_chunk_lines.append(rest)
+            elif tag == '+':
+                new_chunk_lines.append(rest)
+            elif tag == '-':
+                old_chunk_lines.append(rest)
         for delta in myers.diff_chunks(Chunk(old_ln - 1, old_chunk_lines), Chunk(new_ln - 1, new_chunk_lines)):
             patch.add_delta(delta)
         del chunk[:]
@@ -133,8 +136,8 @@ def parse_unified_diff(text):
             if len(line) > 0:
                 tag = line[:1]
                 rest = line[1:]
-                if tag is ' ' or tag is '+' or tag is '-':
-                    raw_chunk.append([tag, rest])
+                if tag == ' ' or tag == '+' or tag == '-':
+                    raw_chunk.append(tag + rest)
             else:
                 raw_chunk.append([' ', ''])
     # Process the lines in the final chunk
