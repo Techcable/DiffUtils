@@ -57,7 +57,7 @@ def build_path(original, revised):
     middle = size // 2
     diagonal = [None] * size
 
-    diagonal[middle + 1] = Snake(0, -1, None)
+    diagonal[middle + 1] = create_snake(0, -1, None)
     for d in range(max_size):
         # Grr, IDK the python way to do this (range won't work because of += 2 at the end)
         k = -d
@@ -79,7 +79,7 @@ def build_path(original, revised):
 
             j = i - k
 
-            node = DiffNode(i, j, prev)
+            node = create_diff_node(i, j, prev)
 
             # orig and rev are zero-based
             # but the algorithm is one-based
@@ -88,7 +88,7 @@ def build_path(original, revised):
                 i += 1
                 j += 1
             if i > node.i:
-                node = Snake(i, j, node)
+                node = create_snake(i, j, node)
 
             diagonal[kmiddle] = node
 
@@ -155,7 +155,7 @@ class DiffNode:
     and each contiguous series of insertions and deletions is represented by a DiffNode.
     """
 
-    def __init__(self, i, j, prev):
+    def __init__(self, i, j):
         """
         Creates a new path node
 
@@ -165,12 +165,8 @@ class DiffNode:
         """
         self.i = i
         self.j = j
-        if prev is None:
-            self.prev = None
-            self.lastSnake = self
-        else:
-            self.prev = prev.previous_snake()
-            self.lastSnake = self.previous_snake()
+        self.lastSnake = None
+        self.snake = False
 
     def is_snake(self):
         """
@@ -178,17 +174,7 @@ class DiffNode:
 
         :return: true if the node is a snake
         """
-        return False
-
-    def is_bootstrap(self):
-        """
-        Return if this a bootstrap node.
-
-        In bootstrap nodes one of the two coordinates is
-        less than zero.
-        :return: true if this is a bootstrap node.
-        """
-        return self.i < 0 or self.j < 0
+        return self.snake
 
     def previous_snake(self):
         """
@@ -197,36 +183,26 @@ class DiffNode:
 
         :return: the first snake or bootstrap node found in the path, or None
         """
-        if self.is_bootstrap():
-            return None
-        elif self.prev is None:
-            return self
-        else:
-            return self.prev.lastSnake
+        return self.lastSnake
 
 
-class Snake(DiffNode):
-    """
-    Represents a snake in a diffpath.
+def create_diff_node(i, j, prev):
+    node = DiffNode(i, j)
+    prev = prev.lastSnake
+    node.prev = prev
+    if i < 0 or j < 0:
+        node.lastSnake = None
+    else:
+        node.lastSnake = prev.lastSnake
+    return node
 
-    See docs for DiffNode
-    """
 
-    def __init__(self, i, j, prev):
-        """
-        Constructs a snake node.
-        :param i: the position in the original sequence
-        :param j: the position in the revised sequence
-        :param prev: the previous node in the path.
-        """
-        super().__init__(i, j, None)
-        self.prev = prev
-
-    def is_snake(self):
-        return True
-
-    def previous_snake(self):
-        return self
+def create_snake(i, j, prev):
+    snake = DiffNode(i, j)
+    snake.prev = prev
+    snake.lastSnake = snake
+    snake.snake = True
+    return snake
 
 
 def diff_chunks(original_chunk, new_chunk):

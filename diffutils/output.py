@@ -17,7 +17,7 @@ from io import StringIO
 
 class UnifiedDiffOutput:
     def __init__(self):
-        self.buffer = StringIO()
+        self.buffer = list()
 
     def add_context_line(self, line):
         self._write(' ', line)
@@ -29,10 +29,11 @@ class UnifiedDiffOutput:
         self._write('+', line)
 
     def _write(self, prefix, line):
-        self.buffer.write(prefix)
-        self.buffer.write(line)
         if not line.endswith('\n'):
-            self.buffer.write('\n')
+            line = prefix + line + '\n'
+        else:
+            line = prefix + line
+        self.buffer.append(line)
 
     def add_delta_text(self, delta):
         for line in delta.original.lines:
@@ -40,11 +41,8 @@ class UnifiedDiffOutput:
         for line in delta.revised.lines:
             self.add_insert_line(line)
 
-    def get_text(self):
-        return self.buffer.getvalue()
-
     def get_lines(self):
-        return self.get_text().splitlines(True)
+        return self.buffer
 
 
 def generate_unified_diff(original_file, revised_file, original_lines, patch, context_size):
@@ -64,8 +62,8 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
     if len(deltas) is 0:
         return list()  # There is nothing in the patch to output
     result = list()
-    result.append("---" + original_file)
-    result.append("+++" + revised_file)
+    result.append("---" + original_file + "\n")
+    result.append("+++" + revised_file + "\n")
 
     delta = deltas[0]
     delta_batch = [delta]  # Deltas are batched together and are output together, to get rid of redundant context
