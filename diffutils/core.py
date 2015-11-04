@@ -17,7 +17,7 @@ from enum import Enum
 """Internal Code"""
 
 
-class Delta:
+class Delta(object):
     """Describes the delta between original and revised texts."""
 
     class Type(Enum):
@@ -79,7 +79,7 @@ class ChangeDelta(Delta):
     """Describes the change-delta between original and revised texts"""
 
     def __init__(self, original, revised):
-        super().__init__(original, revised)
+        super(ChangeDelta, self).__init__(original, revised)
         self.type = Delta.Type.CHANGE
 
     def apply_to(self, target):
@@ -113,7 +113,7 @@ class DeleteDelta(Delta):
     """Describes the delete-delta between original and revised texts."""
 
     def __init__(self, original, revised):
-        super().__init__(original, revised)
+        super(DeleteDelta, self).__init__(original, revised)
         self.type = Delta.Type.DELETE
 
     def apply_to(self, target):
@@ -137,7 +137,7 @@ class InsertDelta(Delta):
     """Describes the add-delta between original and revised texts."""
 
     def __init__(self, original, revised):
-        super().__init__(original, revised)
+        super(InsertDelta, self).__init__(original, revised)
         self.type = Delta.Type.INSERT
 
     def apply_to(self, target):
