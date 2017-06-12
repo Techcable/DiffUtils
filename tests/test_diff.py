@@ -47,5 +47,10 @@ def do_test_engine(engine):
     patched_text = diffutils.patch(original_text, parsed_patch)
     assert patched_text == changed_text, "Patching the original with the parsed unified diff didn't create the chagned"
 
-def test_engine():
-    do_test_engine(DiffEngine.create())
+
+def test_native():
+    do_test_engine(DiffEngine.create(name='native'))
+
+
+def test_plain():
+    do_test_engine(DiffEngine.create(name='plain'))

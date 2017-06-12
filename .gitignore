@@ -9,6 +9,7 @@ DiffUtils.egg-info
 *.pyc
 .eggs
 build
+dist
 __pycache__
 
 # Cython

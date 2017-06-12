@@ -21,16 +21,55 @@ See the paper at http://www.cs.arizona.edu/people/gene/PAPERS/diff.ps
 from .core import Patch, InsertDelta, ChangeDelta, DeleteDelta, Chunk
 from .engine import DiffEngine
 from typing import List, Optional, T
+import hashlib
 
 
 class MyersEngine(DiffEngine):
+    def __init__(self, hash_optimization=True):
+        self.hash_optimization = hash_optimization
+
+    @property
+    def name(self):
+        return 'plain_myers'
+
     def diff(self, original, revised):
-        if original is None:
-            raise ValueError("original list must not be None")
-        if revised is None:
-            raise ValueError("revised list must not be None")
-        path = build_path(original, revised)
+        if type(original) is not list:
+            raise TypeError(f"Original must be a list, not a {type(original)}")
+        if type(revised) is not list:
+            raise TypeError(f"Revised must be a list, not a {type(revised)}")
+        original_hashes: List[bytes] = None
+        revised_hashes: List[bytes] = None
+        if self.hash_optimization:
+            # Since build_path actually doesn't need the elements themselves, we can take their sha256sum to speed up comparison
+            # This can improve performance noticably, since hashes usually differ in the first few bytes and there are only 32 bytes at most
+            original_hashes = []
+            for element in original:
+                if type(element) is not str:
+                    original_hashes, revised_hashes = None, None
+                    break
+                h = hashlib.sha256()
+                h.update(element.encode('utf-8'))
+                original_hashes.append(h.digest())
+        if original_hashes is not None:
+            revised_hashes = []
+            for element in revised:
+                if type(element) is not str:
+                    original_hashes, revised_hashes = None, None
+                    break
+                h = hashlib.sha256()
+                h.update(element.encode('utf-8'))
+                revised_hashes.append(h.digest())
+        if original_hashes is not None:
+            path = build_path(original_hashes, revised_hashes)
+        else:
+            path = build_path(original, revised)
         return build_revision(path, original, revised)
+
+    def __repr__(self):
+        if self.hash_optimization:
+            return "PlainMyersEngine"
+        else:
+            return "PlainMyersEngine(hash_optimization=False)"
 
 
 def build_path(original: List[T], revised: List[T]) -> "DiffNode":

@@ -12,6 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from __future__ import print_function
+import sys
+if tuple(sys.version_info)[:2] < (3, 6):
+    version_str = '.'.join(str(v) for v in sys.version_info[:2])
+    if sys.argv[0] in ('-c', '-m') or __name__ == "__main__":
+        print("Outdated python version: " + version_str)
+        print("Diffutils requires at least python 3.6")
+        sys.exit(1)
+    else:
+        raise ImportError("Outdated version: " + version_str)
 # Public API Functions
 from .api import diff, patch, undo_patch, parse_unified_diff, generate_unified_diff

@@ -1,3 +1,6 @@
+
+# NOTE: Must be first import to check version
+import diffutils
 import argh
 from argh import arg, CommandError
 from pathlib import Path
@@ -6,8 +9,7 @@ from diffutils.output import generate_unified_diff
 from diffutils.engine import DiffEngine
 from diffutils.api import parse_unified_diff, PatchFailedException
 
-
-def run_diff(engine: DiffEngine, original: Path, revised: Path, output: Path, context_size=5, force=False):
+def diff_file(engine: DiffEngine, original: Path, revised: Path, output: Path, context_size=5, force=False):
     original_lines = []
     revised_lines = []
     with open(original, 'rt') as f:
@@ -49,7 +51,7 @@ def run_diff(engine: DiffEngine, original: Path, revised: Path, output: Path, co
         raise CommandError(f"Output file already exists: {output}")
 
 
-def run_patch(patch_file: Path, original: Path, output: Path, context_size=5, force=False):
+def patch_file(patch_file: Path, original: Path, output: Path, context_size=5, force=False):
     original_lines = []
     patch_lines = []
     with open(patch_file, 'rt') as f:
@@ -77,16 +79,26 @@ def run_patch(patch_file: Path, original: Path, output: Path, context_size=5, fo
 @arg('revised', type=Path, help="The revised file/directory")
 @arg('output', type=Path, help="The output file/directory")
 @arg('--ignore-missing', '-i', help="Ignore revised files that are missing from the original dir")
+@arg('--implementation', help="Specify the diff implementation to use")
 @arg('--context', '-c', help="Specify the number of lines of context to output in the patch")
 @arg('--unrestricted', '-u', help="Search hidden files and directories")
 @arg('--force', '-f', help="Forcibly override existing patches")
-def diff(original: Path, revised: Path, output: Path, ignore_missing=False, context=5, unrestricted=False, force=False):
+def diff(original: Path, revised: Path, output: Path, ignore_missing=False, implemetnation=None, context=5, unrestricted=False, force=False):
     """Compute the difference between the original and revised text"""
+    if native_acceleration is str:
+        native_acceleration = native_acceleration.lower()
+        if native_acceleration in ("true", "false"):
+            native_acceleration = (native_acceleration == "true")
+        elif native_acceleration != "force":
+            raise CommandError(f"Invalid native acceleration mode: {native_acceleration}")
     if not original.exists():
         raise CommandError(f"Original file doesn't exist: {original}")
     if not revised.exists():
         raise CommandError(f"Revised file doesn't exist: {revised}")
-    engine = DiffEngine.create()
+    try:
+        engine = DiffEngine.create(name=implemetnation)
+    except ImportError as e:
+        raise CommandError("Unable to import {} implementation!") from e
     if original.is_dir():
         if not revised.is_dir():
             raise CommandError(f"Original {original} is a directory, but revised {revised} is a file!")
@@ -104,7 +116,7 @@ def diff(original: Path, revised: Path, output: Path, ignore_missing=False, cont
                         raise CommandError(f"Revised file {revised_file} doesn't have matching original {original_file}!")
                 output_file = Path(output, relative_path.parent, relative_path.name + ".patch")
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                if run_diff(engine, original_file, revised_file, output_file, context_size=context, force=force):
+                if diff_file(engine, original_file, revised_file, output_file, context_size=context, force=force):
                     print(f"Computed diff: {relative_path}")
             if not unrestricted:
                 hidden_dirs = [d for d in dirs if d.startswith('.')]
@@ -113,7 +125,7 @@ def diff(original: Path, revised: Path, output: Path, ignore_missing=False, cont
     else:
         if not revised.is_file():
             raise CommandError(f"Original {original} is a file, but revised {revised} is a directory!")
-        run_diff(engine, original, revised, output, context_size=context, force=force)
+        diff_file(engine, original, revised, output, context_size=context, force=force)
 
 
 @arg('patches', help="The patches to apply")
@@ -122,10 +134,6 @@ def diff(original: Path, revised: Path, output: Path, ignore_missing=False, cont
 @arg('--force', '-f', help="Forcibly override existing files")
 def patch(patches: Path, original: Path, output: Path, force=False):
     """Applies the specified patches to the original files, producing the revised text"""
-    if not patches.exists():
-        raise CommandError(f"Patch file doesn't exist: {patches}")
-    if not original.exists():
-        raise CommandError(f"Original file doesn't exist: {original}")
     if patches.is_dir():
         if not original.is_dir():
             raise CommandError(f"Patches {patches} is a directory, but original {original} is a file!")
@@ -134,25 +142,32 @@ def patch(patches: Path, original: Path, output: Path, force=False):
                 patch_file = Path(patch_root, patch_file_name)
                 if patch_file.suffix != '.patch':
                     raise CommandError(f"Patch file doesn't end with '.patch': {patch_file_name}")
-                relative_path = Path(patch_file.parent.relative_to(patches), patch_file.stem)
+                relative_path = Path(revised_file.parent.relative_to(revised), revised_file.stem)
                 original_file = Path(original, relative_path)
-                output_file = Path(output, relative_path)
+                revised_file = Path(revised_root, revised_file_name)
                 if not original_file.exists():
                     raise CommandError(f"Couldn't find  original {original_file} for patch {patch_file}!")
                 output_file = Path(output, relative_path.parent, relative_path.name + ".patch")
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                if run_patch(patch_file, original_file, output_file, force=force):
+                if diff_file(engine, original_file, revised_file, output_file, context_size=context, force=force):
                     print(f"Computed diff: {relative_path}")
+            if not unrestricted:
+                hidden_dirs = [d for d in dirs if d.startswith('.')]
+                for d in hidden_dirs:
+                    dirs.remove(d)
     else:
         if not original.is_file():
             raise CommandError(f"Patches {patches} is a file, but origianl {original} is a directory!")
-        run_patch(patches, original, output, force=force)
-
+        patch_file(patches, original, output, force=force)
 
 def main():
     parser = argh.ArghParser(description="A diff/patch utility")
     parser.add_commands([diff, patch])
     parser.dispatch()
+    if not patches.exists():
+        raise CommandError(f"Patch file doesn't exist: {patches}")
+    if not original.exists():
+        raise CommandError(f"Original file doesn't exist: {original}")
 
 if __name__ == "__main__":
     main()

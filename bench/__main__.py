@@ -59,11 +59,6 @@ bench_methods = {
         """
     )
 }
-possible_engines = {
-    "diff": (
-        ("plain", DiffEngine.create()),
-    )
-}
 __cached_test_data_lines = {}
 
 
@@ -84,10 +79,11 @@ def main():
     parser = ArgumentParser(description="Benchmarks DiffUtils")
     available_targets = frozenset(bench_methods.keys())
     parser.add_argument('targets', nargs='+', choices=[*available_targets, "all"], help="The items to benchmark")
-    parser.add_argument('--iterations', '-i', default=30, help="The number of benchmark iterations to perform")
+    parser.add_argument('--iterations', '-i', default=10, help="The number of benchmark iterations to perform on each")
     parser.add_argument('--repeat', '-r', default=3, help="The number of times to repeat the benchmark")
     parser.add_argument('--data-dir', dest='data_dir', default=f"{dirname(__file__)}/data", help="The location of the benchmarking data")
     args = parser.parse_args()
+    iterations = args.iterations
     repeat = args.repeat
     targets = args.targets
     data_dir = args.data_dir
@@ -105,7 +101,10 @@ def main():
             setup_code, bench_code = bench_methods[target]
             setup_code = textwrap.dedent(setup_code)
             bench_code = textwrap.dedent(bench_code)
-            engines = possible_engines.get(target, None)
+            if target == 'diff':
+                engines = DiffEngine.available_engines()
+            else:
+                engines = None
             bench_env = dict(globals())
             for local_param in ("original_name", "revised_name", "original_lines", "revised_lines"):
                 existing_value = bench_env.get(local_param)
@@ -116,7 +115,7 @@ def main():
             def run_bench(bench_env, engine_name=None):
                 timer = Timer(setup=setup_code, stmt=bench_code, globals=bench_env)
                 try:
-                    result = timer.timeit(number=repeat)
+                    result = min(timer.repeat(repeat=repeat, number=iterations))
                 except Exception:
                     message = f"Unable to run {target} between {original_name} and {revised_name}"
                     if engine_name:
@@ -127,14 +126,14 @@ def main():
                 result *= 1000
                 message = f"{padded_target}  {result:.3f} ms -- {original_name} and {revised_name}"
                 if engine_name:
-                    message += f" with {engine_name} engine"
+                    message += f" with {engine_name}"
                 print(message)
 
             assert 'engine' not in bench_env, "engine already present: " + repr(bench_env['engine'])
             if engines is not None:
-                for engine_name, engine in engines:
+                for engine in DiffEngine.available_engines():
                     bench_env['engine'] = engine
-                    run_bench(bench_env, engine_name=engine_name)
+                    run_bench(bench_env, engine_name=repr(engine))
             else:
                 run_bench(bench_env)
 
