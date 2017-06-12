@@ -18,26 +18,22 @@ A clean-room implementation of <a href="http://www.cs.arizona.edu/people/gene/">
 
 See the paper at http://www.cs.arizona.edu/people/gene/PAPERS/diff.ps
 """
-from .core import *
+from .core import Patch, InsertDelta, ChangeDelta, DeleteDelta, Chunk
+from .engine import DiffEngine
+from typing import List, Optional, T
 
 
-def diff(original, revised):
-    """
-    Computes the difference between the original sequence and the revised sequence.
-
-    :param original: The original text. Must not be None
-    :param revised: The revised text. Must not be None
-    :return: a patch object representing the difference
-    """
-    if original is None:
-        raise ValueError("original list must not be None")
-    if revised is None:
-        raise ValueError("revised list must not be None")
-    path = build_path(original, revised)
-    return build_revision(path, original, revised)
+class MyersEngine(DiffEngine):
+    def diff(self, original, revised):
+        if original is None:
+            raise ValueError("original list must not be None")
+        if revised is None:
+            raise ValueError("revised list must not be None")
+        path = build_path(original, revised)
+        return build_revision(path, original, revised)
 
 
-def build_path(original, revised):
+def build_path(original: List[T], revised: List[T]) -> "DiffNode":
     """
     Computes the minimum diffpath that expresses the differences between the original and revised sequences,
     according to Gene Myers differencing algorithm.
@@ -46,7 +42,7 @@ def build_path(original, revised):
 
     :param original: The original sequence.
     :param revised: The revised sequence.
-    :return: A minimum {@link PathNode Path} across the differences graph.
+    :return: A minimum {@link DiffNode Path} across the differences graph.
     :exception RuntimeError: if a diff path could not be found.
     """
     original_size = len(original)
@@ -55,13 +51,11 @@ def build_path(original, revised):
     max_size = original_size + revised_size + 1
     size = 1 + 2 * max_size
     middle = size // 2
-    diagonal = [None] * size
+    diagonal: List[Optional["DiffNode"]] = [None] * size
 
     diagonal[middle + 1] = create_snake(0, -1, None)
     for d in range(max_size):
-        # Grr, IDK the python way to do this (range won't work because of += 2 at the end)
-        k = -d
-        while k <= d:
+        for k in range(-d, d + 1, 2):
             kmiddle = middle + k
             kplus = kmiddle + 1
             kminus = kmiddle - 1
@@ -95,15 +89,13 @@ def build_path(original, revised):
             if i >= original_size and j >= revised_size:
                 return diagonal[kmiddle]
 
-            k += 2
-
         diagonal[middle + d - 1] = None
 
     # According to Myers, this cannot happen
     raise RuntimeError("couldn't find a diff path")
 
 
-def build_revision(path, original, revised):
+def build_revision(path: "DiffNode", original: List[T], revised: List[T]) -> Patch:
     """
     Constructs a {@link Patch} from a difference path.
 
@@ -130,9 +122,9 @@ def build_revision(path, original, revised):
         revised_chunk = Chunk(janchor, revised[janchor:j])
         delta = None
 
-        if original_chunk.size() is 0 and revised_chunk.size() is not 0:
+        if original_chunk.size is 0 and revised_chunk.size is not 0:
             delta = InsertDelta(original_chunk, revised_chunk)
-        elif original_chunk.size() > 0 and revised_chunk.size() is 0:
+        elif original_chunk.size > 0 and revised_chunk.size is 0:
             delta = DeleteDelta(original_chunk, revised_chunk)
         else:
             delta = ChangeDelta(original_chunk, revised_chunk)
@@ -154,6 +146,12 @@ class DiffNode:
     because each snake is represented by a single Snake node
     and each contiguous series of insertions and deletions is represented by a DiffNode.
     """
+    __slots__ = "i", "j", "lastSnake", "snake", "prev"
+    i: int
+    j: int
+    lastSnake: Optional["DiffNode"]
+    prev: Optional["DiffNode"]
+    snake: bool
 
     def __init__(self, i, j):
         """
@@ -203,18 +201,3 @@ def create_snake(i, j, prev):
     snake.lastSnake = snake
     snake.snake = True
     return snake
-
-
-def diff_chunks(original_chunk, new_chunk):
-    """
-    Return the deltas that have the minimal diff between the two chunks
-
-    :param original_chunk: the original chunk
-    :param new_chunk: the new chunk
-    :return: a list of deltas that are the minimum diff between the two chunks
-    """
-    # Create fake lines so the diff method outputs the correct positions
-    fake_original_lines = [""] * original_chunk.position
-    fake_new_lines = [""] * original_chunk.position
-    patch = diff(fake_original_lines + original_chunk.lines, fake_new_lines + new_chunk.lines)
-    return patch.get_deltas()

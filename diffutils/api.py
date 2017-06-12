@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import re
-from diffutils import myers, output
+from . import output
 from diffutils.core import *
+from diffutils.engine import DiffEngine
 
 """The public API for DiffUtils"""
 
@@ -34,8 +35,8 @@ def diff(original, revised):
         original = original.splitlines()
     if isinstance(revised, str):
         original = original.splitlines()
-    patch = myers.diff(original, revised)
-    if len(patch.get_deltas()) is 0:
+    patch = DiffEngine.INSTANCE.diff(original, revised)
+    if not patch.deltas:
         return None
     return patch
 
@@ -72,8 +73,6 @@ def parse_unified_diff(text):
     """
     Parse the given text in unified format into a patch.
 
-    Warning, this method outputs a 'ChangeDelta', which
-
     :param text: the unified diff
     :return: the parsed patch
     """
@@ -102,11 +101,12 @@ def parse_unified_diff(text):
                 new_chunk_lines.append(rest)
             elif tag == '-':
                 old_chunk_lines.append(rest)
-        for delta in myers.diff_chunks(Chunk(old_ln - 1, old_chunk_lines), Chunk(new_ln - 1, new_chunk_lines)):
+        for delta in DiffEngine.INSTANCE.diff_chunks(Chunk(old_ln - 1, old_chunk_lines), Chunk(new_ln - 1, new_chunk_lines)):
             patch.add_delta(delta)
         del chunk[:]
 
     for line in text:
+        assert '\n' not in line, f"Newline in line: {repr(line)}"
         if in_prelude:
             # Skip leading lines until after we've seen one starting with '+++'
             if line.startswith("+++"):

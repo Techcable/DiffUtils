@@ -13,17 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import Enum
+from abc import ABCMeta, abstractmethod
+from typing import List, Union, Tuple
+import operator
 
 """Internal Code"""
 
+__all__ = (
+    "Delta",
+    "Chunk",
+    "Patch",
+    "PatchFailedException"
+)
 
-class Delta(object):
+
+class Delta(metaclass=ABCMeta):
     """Describes the delta between original and revised texts."""
 
     class Type(Enum):
         CHANGE = 1
         DELETE = 2
         INSERT = 3
+
+    @property
+    @abstractmethod
+    def type(self) -> Type:
+        pass
 
     def __init__(self, original, revised):
         """
@@ -80,12 +95,15 @@ class ChangeDelta(Delta):
 
     def __init__(self, original, revised):
         super(ChangeDelta, self).__init__(original, revised)
-        self.type = Delta.Type.CHANGE
+    
+    @property
+    def type(self):
+        return Delta.Type.CHANGE
 
     def apply_to(self, target):
         self.verify(target)
         position = self.original.position
-        size = self.original.size()
+        size = self.original.size
         for i in range(size):
             del target[position]
         i = 0
@@ -95,7 +113,7 @@ class ChangeDelta(Delta):
 
     def restore(self, target):
         position = self.revised.position
-        size = self.revised.size()
+        size = self.revised.size
         for i in range(size):
             target.remove(i)
         i = 0
@@ -114,12 +132,15 @@ class DeleteDelta(Delta):
 
     def __init__(self, original, revised):
         super(DeleteDelta, self).__init__(original, revised)
-        self.type = Delta.Type.DELETE
 
+    @property
+    def type(self):
+        return Delta.Type.DELETE
+    
     def apply_to(self, target):
         self.verify(target)
         position = self.original.position
-        size = self.original.size()
+        size = self.original.size
         for i in range(size):
             del target[position]
 
@@ -138,7 +159,10 @@ class InsertDelta(Delta):
 
     def __init__(self, original, revised):
         super(InsertDelta, self).__init__(original, revised)
-        self.type = Delta.Type.INSERT
+
+    @property
+    def type(self):
+        return Delta.Type.INSERT
 
     def apply_to(self, target):
         self.verify(target)
@@ -149,13 +173,14 @@ class InsertDelta(Delta):
 
     def restore(self, target):
         position = self.revised.position
-        size = self.revised.size()
+        size = self.revised.size
         for i in range(size):
             target.remove(position)
 
     def verify(self, target):
         if self.original.position > len(target):
             raise PatchFailedException("Incorrect patch for delta: delta original position > target size")
+
 
 class Chunk:
     """Holds the information about the part of text involved in the diff process"""
@@ -174,11 +199,16 @@ class Chunk:
         """
         if self.last() > len(target):
             raise PatchFailedException("Incorrect Chunk: the position of chunk > target size")
-        for i in range(self.size()):
-            if target[self.position + i] != self.lines[i]:
+        position = self.position
+        for (offset, expected) in enumerate(self.lines):
+            index = position + offset
+            actual = target[index]
+            if actual != expected:
                 raise PatchFailedException(
-                    "Incorrect Chunk: the chunk content doesn't match the target at " + str(self.position + i))
+                    f"Incorrect Chunk: the chunk content {repr(expected)} doesn't match the target {repr(actual)} at {index}"
+                )
 
+    @property
     def size(self):
         """
         Returns the number of lines in the chunk
@@ -193,10 +223,10 @@ class Chunk:
 
         :return: the index of the last line of the chunk
         """
-        return self.position + self.size() - 1
+        return self.position + self.size - 1
 
     def __hash__(self):
-        return hash((self.lines, self.position, self.size()))
+        return hash((self.lines, self.position, self.size))
 
     def __eq__(self, other):
         if not isinstance(other, Chunk):
@@ -206,6 +236,8 @@ class Chunk:
 
 class Patch:
     """A patch holding all deltas between the original and revised texts."""
+    __slots__ = "_deltas"
+    _deltas: Union[Tuple[Delta, ...], List[Delta]]
 
     def __init__(self):
         self._deltas = list()
@@ -219,7 +251,7 @@ class Patch:
         :exception PatchFailedException: if unable to apply
         """
         result = list(target)
-        for delta in reversed(self._deltas):
+        for delta in reversed(self.deltas):
             delta.apply_to(result)
         return result
 
@@ -232,7 +264,7 @@ class Patch:
         :return: the original text
         """
         result = list(target)
-        for delta in reversed(self._deltas):
+        for delta in reversed(self.deltas):
             delta.restore(result)
         return result
 
@@ -242,16 +274,24 @@ class Patch:
 
         :param delta: the delta to add
         """
-        self._deltas.append(delta)
-        self._deltas.sort(key=lambda d: d.original.position)
+        # NOTE: We defer sorting till the first access to avoid O(n^2) behavior
+        deltas = self._deltas
+        if type(deltas) is not list:
+            # We were a tuple since people were reading us, copy back to a list now that insertions are happening
+            self._deltas = deltas = list(deltas)
+        deltas.append(delta)
 
-    def get_deltas(self):
-        """
-        Get a copy of this patch's deltas
-
-        :return: this patch's deltas
-        """
-        return self._deltas[:]
+    @property
+    def deltas(self) -> Tuple[Delta, ...]:
+        # NOTE: Make defensive copy, and transparently sort the array on first access
+        # To the caller, this class appears to have O(1) insertions while maintaining the sort invariant
+        # This copy/sort should only happen rarely, since the Patch is usually only inserted to at first
+        deltas = self._deltas
+        if type(deltas) is not tuple:
+            # NOTE: Mypy is stupid and doesn't recognize our speed hack
+            deltas.sort(key=operator.attrgetter('original.position'))  # type: ignore
+            self._deltas = deltas = tuple(deltas)
+        return deltas  # type: ignore
 
     def __eq__(self, other):
         if not isinstance(other, Patch):

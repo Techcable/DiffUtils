@@ -7,3 +7,12 @@ DiffUtils.egg-info
 
 # Python
 *.pyc
+.eggs
+build
+__pycache__
+
+# Cython
+diffutils/_native/*.c
+*.so
+.cache
+cython_debug
