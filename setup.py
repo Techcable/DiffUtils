@@ -25,7 +25,7 @@ else:
 
 setup(
     name='diffutils',
-    version='1.0.4',
+    version='1.0.5',
     description='A python diff/patch library, with support for unified diffs and a native diff implementation',
     author='Techcable',
     author_email='Techcable@outlook.com',
