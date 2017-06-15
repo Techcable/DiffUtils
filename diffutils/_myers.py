@@ -18,7 +18,7 @@ A clean-room implementation of <a href="http://www.cs.arizona.edu/people/gene/">
 
 See the paper at http://www.cs.arizona.edu/people/gene/PAPERS/diff.ps
 """
-from .core import Patch, InsertDelta, ChangeDelta, DeleteDelta, Chunk
+from .core import Patch, Delta, Chunk
 from .engine import DiffEngine
 from typing import List, Optional, T
 import hashlib
@@ -159,14 +159,7 @@ def build_revision(path: "DiffNode", original: List[T], revised: List[T]) -> Pat
 
         original_chunk = Chunk(ianchor, original[ianchor:i])
         revised_chunk = Chunk(janchor, revised[janchor:j])
-        delta = None
-
-        if original_chunk.size is 0 and revised_chunk.size is not 0:
-            delta = InsertDelta(original_chunk, revised_chunk)
-        elif original_chunk.size > 0 and revised_chunk.size is 0:
-            delta = DeleteDelta(original_chunk, revised_chunk)
-        else:
-            delta = ChangeDelta(original_chunk, revised_chunk)
+        delta = Delta.create(original_chunk, revised_chunk)
 
         patch.add_delta(delta)
         if path.is_snake():

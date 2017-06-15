@@ -29,6 +29,7 @@ __all__ = (
 
 class Delta(metaclass=ABCMeta):
     """Describes the delta between original and revised texts."""
+    __slots__ = "original", "revised"
 
     class Type(Enum):
         CHANGE = 1
@@ -40,7 +41,7 @@ class Delta(metaclass=ABCMeta):
     def type(self) -> Type:
         pass
 
-    def __init__(self, original, revised):
+    def __init__(self, original: "Chunk", revised: "Chunk"):
         """
         Construct the delta for original and revised chunks
 
@@ -61,7 +62,11 @@ class Delta(metaclass=ABCMeta):
         :param target: target the target to verify
         :exception PatchFailedException: if the patch is not valid
         """
-        raise NotImplementedError
+        original, revised = self.original, self.revised
+        if original:
+            original.verify(target)
+        if revised and original.position > len(target):
+            raise PatchFailedException("Incorrect patch for delta: delta original position > target size")
 
     def apply_to(self, target):
         """
@@ -70,7 +75,18 @@ class Delta(metaclass=ABCMeta):
         :param target: the target to apply to
         :exception PatchFailedException: if the patch could not be applied
         """
-        raise NotImplementedError
+        original, revised = self.original, self.revised
+        self.verify(target)
+        position = original.position
+        size = len(original)
+        if original:
+            # NOTE: This was a call to remove in a loop, which was O(n^2)
+            # In my deffense I didn't understand slicing, so I didn't know how to do it fast
+            del target[position:position + size]
+        if revised:
+            # NOTE: This was a call to insert in a loop, which was O(n^2)
+            # In my defense I didn't understand slicing, so I didn't know how to do it fast
+            target[position:position] = revised.lines
 
     def restore(self, target):
         """
@@ -79,111 +95,69 @@ class Delta(metaclass=ABCMeta):
 
         :param target: the revised text
         """
-        raise NotImplementedError
+        self.reverse().apply_to(target)
+
+    def reverse(self) -> "Delta":
+        return Delta.create(original=self.revised, revised=self.original)
 
     def __hash__(self):
         return hash((self.original, self.revised))
 
     def __eq__(self, other):
-        if not isinstance(other, Delta):
-            return False
-        return self.original == other.original and self.revised == other.revised and other.type == self.type
+        if isinstance(other, Delta):
+            return self.original == other.original and self.revised == other.revised
+        else:
+            return NotImplemented
+
+    @staticmethod
+    def create(original: "Chunk", revised: "Chunk") -> "Delta":
+        """Create a delta of the apropriate type, based on the original and revised chunks"""
+        assert type(original) is Chunk and type(revised) is Chunk
+        if original:
+            if revised:
+                delta_type = ChangeDelta
+            else:
+                delta_type = DeleteDelta
+        elif revised:
+            delta_type = InsertDelta
+        else:
+            raise ValueError("Empty deltas!")
+        return delta_type(original, revised)
 
 
 class ChangeDelta(Delta):
     """Describes the change-delta between original and revised texts"""
 
-    def __init__(self, original, revised):
-        super(ChangeDelta, self).__init__(original, revised)
-    
+    # NOTE: We inherit almost everything, and we're mostly just here for backwards compat
+
     @property
     def type(self):
         return Delta.Type.CHANGE
-
-    def apply_to(self, target):
-        self.verify(target)
-        position = self.original.position
-        size = self.original.size
-        for i in range(size):
-            del target[position]
-        i = 0
-        for line in self.revised.lines:
-            target.insert(position + i, line)
-            i += 1
-
-    def restore(self, target):
-        position = self.revised.position
-        size = self.revised.size
-        for i in range(size):
-            target.remove(i)
-        i = 0
-        for line in self.original.lines:
-            target.insert(position + i, line)
-            i += 1
-
-    def verify(self, target):
-        self.original.verify(target)
-        if self.original.position > len(target):
-            raise PatchFailedException("Incorrect patch for delta: delta original position > target size")
 
 
 class DeleteDelta(Delta):
     """Describes the delete-delta between original and revised texts."""
 
-    def __init__(self, original, revised):
-        super(DeleteDelta, self).__init__(original, revised)
+    # NOTE: We inherit almost everything, and we're mostly just here for backwards compat
 
     @property
     def type(self):
         return Delta.Type.DELETE
-    
-    def apply_to(self, target):
-        self.verify(target)
-        position = self.original.position
-        size = self.original.size
-        for i in range(size):
-            del target[position]
-
-    def restore(self, target):
-        position = self.revised.position
-        lines = self.original.lines
-        for i in range(len(lines)):
-            target.insert(position + i, lines[i])
-
-    def verify(self, target):
-        self.original.verify(target)
 
 
 class InsertDelta(Delta):
     """Describes the add-delta between original and revised texts."""
 
-    def __init__(self, original, revised):
-        super(InsertDelta, self).__init__(original, revised)
+    # NOTE: We inherit almost everything, and we're mostly just here for backwards compat
 
     @property
     def type(self):
         return Delta.Type.INSERT
 
-    def apply_to(self, target):
-        self.verify(target)
-        position = self.original.position
-        lines = self.revised.lines
-        for i in range(len(lines)):
-            target.insert(position + i, lines[i])
-
-    def restore(self, target):
-        position = self.revised.position
-        size = self.revised.size
-        for i in range(size):
-            target.remove(position)
-
-    def verify(self, target):
-        if self.original.position > len(target):
-            raise PatchFailedException("Incorrect patch for delta: delta original position > target size")
-
 
 class Chunk:
     """Holds the information about the part of text involved in the diff process"""
+    __slots__ = "position", "lines"
 
     def __init__(self, position, lines):
         """Creates a chunk and saves a copy of affected lines"""
@@ -197,7 +171,7 @@ class Chunk:
         :param target: the sequence to verify against.
         :exception PatchFailedException: If doesn't match
         """
-        if self.last() > len(target):
+        if self.last > len(target):
             raise PatchFailedException("Incorrect Chunk: the position of chunk > target size")
         position = self.position
         for (offset, expected) in enumerate(self.lines):
@@ -208,8 +182,7 @@ class Chunk:
                     f"Incorrect Chunk: the chunk content {repr(expected)} doesn't match the target {repr(actual)} at {index}"
                 )
 
-    @property
-    def size(self):
+    def __len__(self):
         """
         Returns the number of lines in the chunk
 
@@ -217,16 +190,17 @@ class Chunk:
         """
         return len(self.lines)
 
+    @property
     def last(self):
         """
         Returns the index of the last line of the chunk.
 
         :return: the index of the last line of the chunk
         """
-        return self.position + self.size - 1
+        return self.position + len(self.lines) - 1
 
     def __hash__(self):
-        return hash((self.lines, self.position, self.size))
+        return hash((self.lines, self.position))
 
     def __eq__(self, other):
         if not isinstance(other, Chunk):
@@ -250,6 +224,8 @@ class Patch:
         :return: the patched text
         :exception PatchFailedException: if unable to apply
         """
+        if isinstance(target, str):
+            target = target.splitlines()
         result = list(target)
         for delta in reversed(self.deltas):
             delta.apply_to(result)

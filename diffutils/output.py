@@ -57,8 +57,8 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
     deltas = patch.deltas
     if not deltas:
         return  # There is nothing in the patch to output
-    yield "---" + original_file
-    yield "+++" + revised_file
+    yield "--- " + original_file
+    yield "+++ " + revised_file
 
     delta = deltas[0]
     delta_batch = [delta]  # Deltas are batched together and are output together, to get rid of redundant context
@@ -90,7 +90,7 @@ def process_deltas(original_lines, deltas, context_size):
     # +1 to overcome the 0-offset Position
     original_start = max(1, delta.original.position + 1 - context_size)
 
-    revised_start = max(1, delta.original.position + 1 - context_size)
+    revised_start = max(1, delta.revised.position + 1 - context_size)
 
     context_start = max(0, delta.original.position - context_size)
 
@@ -102,21 +102,21 @@ def process_deltas(original_lines, deltas, context_size):
 
     # Output the first delta
     buffer.add_delta_text(delta)
-    original_total += len(delta.original.lines)
-    revised_total += len(delta.revised.lines)
+    original_total += len(delta.original)
+    revised_total += len(delta.revised)
 
     for next_delta in deltas[1:]:
-        intermediate_start = delta.original.position + len(delta.original.lines)
+        intermediate_start = delta.original.position + len(delta.original)
         for lineIndex in range(intermediate_start, next_delta.original.position):
             buffer.add_context_line(original_lines[lineIndex])
             original_total += 1
             revised_total += 1
         buffer.add_delta_text(next_delta)
-        original_total += len(delta.original.lines)
-        revised_total += len(delta.revised.lines)
+        original_total += len(next_delta.original)
+        revised_total += len(next_delta.revised)
         delta = next_delta
 
-    context_start = delta.original.position + len(delta.original.lines)
+    context_start = delta.original.position + len(delta.original)
     for lineIndex in range(context_start, min(context_start + context_size, len(original_lines))):
         buffer.add_context_line(original_lines[lineIndex])
         original_total += 1

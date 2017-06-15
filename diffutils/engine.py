@@ -24,19 +24,22 @@ class DiffEngine(metaclass=ABCMeta):
     def name(self) -> str:
         pass
 
-    def diff_chunks(self, original_chunk: Chunk, new_chunk: Chunk):
+    def diff_chunks(self, original_chunk: Chunk, revised_chunk: Chunk):
         """
         Return the deltas that have the minimal diff between the two chunks
 
         :param original_chunk: the original chunk
-        :param new_chunk: the new chunk
+        :param revised_chunk: the revised chunk
         :return: a list of deltas that are the minimum diff between the two chunks
         """
-        # Create fake lines so the diff method outputs the correct positions
-        fake_original_lines = [""] * original_chunk.position
-        fake_new_lines = [""] * original_chunk.position
-        patch = self.diff(fake_original_lines + original_chunk.lines, fake_new_lines + new_chunk.lines)
-        return patch.deltas
+        original_position, revised_position = original_chunk.position, revised_chunk.position
+        patch = self.diff(original_chunk.lines, revised_chunk.lines)
+        # Correct the offsets in the deltas
+        deltas = patch.deltas
+        for delta in deltas:
+            delta.original.position += original_position
+            delta.revised.position += revised_position
+        return deltas
 
     def __repr__(self) -> str:
         import re
@@ -62,7 +65,7 @@ class DiffEngine(metaclass=ABCMeta):
             result.append(DiffEngine.create(name='plain', hash_optimization=True))
             result.append(DiffEngine.create(name='plain', hash_optimization=False))
             result = tuple(result)
-            setattr(DiffEngine, '_available_engines', tuple(result))
+            setattr(DiffEngine, '_available_engines', result)
             return result
 
     @staticmethod

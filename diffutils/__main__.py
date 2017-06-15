@@ -9,6 +9,7 @@ from diffutils.output import generate_unified_diff
 from diffutils.engine import DiffEngine
 from diffutils.api import parse_unified_diff, PatchFailedException
 
+
 def do_diff(engine: DiffEngine, original: Path, revised: Path, output: Path, context_size=5, force=False):
     original_lines = []
     revised_lines = []
@@ -152,10 +153,59 @@ def patch(patches: Path, original: Path, output: Path, force=False):
             raise CommandError(f"Patches {patches} is a file, but origianl {original} is a directory!")
         do_patch(patches, original, output, force=force)
 
+
+@arg('patch_file', type=Path, help="The patch file to fix")
+@arg('original_file', type=Path, help="The original file, used to output context information")
+@arg('--strict', help="Strictly parse the patch, failing on any errors")
+@arg('--context', '-c', help="Specify the context to use when re-emitting the patch")
+def fix_patch(patch_file: Path, original_file: Path, strict=False, context=5):
+    """Fixes errors detected in the patch, by leniently parsing it and then re-emitting it"""
+    if not patch_file.is_file():
+        if patch_file.exists():
+            raise CommandError(f"Patch file is a directory: {patch_file}")
+        else:
+            raise CommandError(f"Patch file doesn't exist: {patch_file}")
+    if not original_file.is_file():
+        if original_file.exists():
+            raise CommandError(f"Original file is a directory: {original_file}")
+        else:
+            raise CommandError(f"Original file doesn't exist: {original_file}")
+    patch_lines = []
+    # TODO: Make a public API for parsing original_name and revised_name
+    original_name, revised_name = None, None
+    with open(patch_file, 'rt') as f:
+        for line in f:
+            if original_name is None and line.startswith('---'):
+                original_name = line[3:].split()[0]
+            elif revised_name is None and line.startswith('+++'):
+                revised_name = line[3:].split()[0]
+            patch_lines.append(line.rstrip("\r\n"))
+    original_lines = []
+    with open(original_file, 'rt') as f:
+        for line in f:
+            original_lines.append(line.rstrip("\r\n"))
+    if original_name is None:
+        raise CommandError(f"Unable to detect original file name in {patch_file}")
+    elif revised_name is None:
+        raise CommandError(f"Unable to detect revised file name in {patch_file}")
+    patch = parse_unified_diff(patch_lines, lenient=not strict)
+    with open(patch_file, 'wt') as f:
+        for line in generate_unified_diff(
+            original_name,
+            revised_name,
+            original_lines,
+            patch,
+            context_size=context
+        ):
+            f.write(line)
+            f.write('\n')
+
+
 def main():
     parser = argh.ArghParser(description="A diff/patch utility")
-    parser.add_commands([diff, patch])
+    parser.add_commands([diff, patch, fix_patch])
     parser.dispatch()
+
 
 if __name__ == "__main__":
     main()

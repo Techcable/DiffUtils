@@ -1,5 +1,5 @@
 from ..engine import DiffEngine
-from ..core import Delta, Patch, InsertDelta, ChangeDelta, DeleteDelta, Chunk
+from ..core import Delta, Patch, Chunk
 from libc.stdlib cimport malloc, free, calloc, realloc, abort
 from libc.string cimport memcpy, memcmp
 from cpython cimport array
@@ -131,14 +131,7 @@ cdef build_revision(DiffNode *path, list original, list revised):
 
         original_chunk = Chunk(ianchor, original[ianchor:i])
         revised_chunk = Chunk(janchor, revised[janchor:j])
-        delta = None
-
-        if original_chunk.size == 0 and revised_chunk.size != 0:
-            delta = InsertDelta(original_chunk, revised_chunk)
-        elif original_chunk.size > 0 and revised_chunk.size == 0:
-            delta = DeleteDelta(original_chunk, revised_chunk)
-        else:
-            delta = ChangeDelta(original_chunk, revised_chunk)
+        delta = Delta.create(original_chunk, revised_chunk)
 
         patch.add_delta(delta)
         if path.snake:
