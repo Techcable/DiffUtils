@@ -1,12 +1,20 @@
 from ..engine import DiffEngine
 from ..core import Delta, Patch, Chunk
 from libc.stdlib cimport malloc, free, calloc, realloc, abort
-from libc.string cimport memcpy, memcmp
+from libc.string cimport memcmp, memmove
 from cpython cimport array
-import hashlib
+IF USE_HASHLIB:
+    import hashlib
+    from hasher cimport ShaHasher
+ELSE:
+    from hasher cimport *
 
 # Hopefully 6KB is enough to start off with
 DEF CHUNK_SIZE = 256
+
+cdef struct NativeString:
+    size_t size
+    char *data
 
 cpdef native_diff(original, revised):
     cdef DiffNode *path
@@ -19,25 +27,77 @@ cpdef native_diff(original, revised):
     cdef size_t original_size = len(original)
     cdef size_t revised_size = len(revised)
     # Take the sha256sum of the lines to speed up diffing, since string comparison is one of the main costs
+    # When not USE_HASHLIB, we can actually release the GIL when we hash, further improving performance.
     cdef char[32] *original_hashes = <char[32]*> malloc(original_size * sizeof(char[32]))
     if not original_hashes:
         raise MemoryError()
     cdef char[32] *revised_hashes =  <char[32]*> malloc(revised_size * sizeof(char[32]))
     if not revised_hashes:
         raise MemoryError()
+    IF not USE_HASHLIB:
+        # NOTE: Use calloc so we crash on uninitialized memory
+        cdef NativeString *original_lines = <NativeString*> calloc(original_size, sizeof(NativeString))
+        cdef NativeString *revised_lines = <NativeString*> calloc(revised_size, sizeof(NativeString))
+        cdef ShaHasher *hasher = NULL
+        cdef int err_code
+    cdef bytes element_bytes
+    cdef NativeString *nstring
+    cdef char *string_data
+    cdef char *raw_element_bytes
+    cdef size_t string_size
     try:
         for (index, element) in enumerate(original):
             assert index < original_size
             if type(element) is not str:
                 raise TypeError(f"Element at original index {index} must be a str, not a {type(element)}")
             element_bytes = element.encode('utf-8')
-            sha256sum(element_bytes, original_hashes[index])
+            IF USE_HASHLIB:
+                hashlib_sha256sum(element_bytes, len(element_bytes), original_hashes[index])
+            ELSE:
+                string_size = len(element_bytes)
+                string_data = <char*> malloc(string_size + 1)
+                raw_element_bytes = element_bytes
+                memmove(string_data, raw_element_bytes, string_size)
+                string_data[string_size] = '\0'
+                nstring = &original_lines[index]
+                nstring.size = string_size
+                nstring.data = string_data
         for (index, element) in enumerate(revised):
             assert index < revised_size
             if type(element) is not str:
                 raise TypeError(f"Element at revised index {index} must be a str, not a {type(element)}")
             element_bytes = element.encode('utf-8')
-            sha256sum(element_bytes, revised_hashes[index])
+            IF USE_HASHLIB:
+                hashlib_sha256sum(element_bytes, len(element_bytes), revised_hashes[index])
+            ELSE:
+                string_size = len(element_bytes)
+                string_data = <char*> malloc(string_size + 1)
+                raw_element_bytes = element_bytes
+                memmove(string_data, raw_element_bytes, string_size)
+                string_data[string_size] = '\0'
+                nstring = &revised_lines[index]
+                nstring.size = string_size
+                nstring.data = string_data
+        IF not USE_HASHLIB:
+            hasher = create_hasher(SHA_256)
+            # We can release the GIL while hashing the lines, since we use OpenSSL for hashing
+            failure = False
+            with nogil:
+                for i in range(<int> original_size):
+                    nstring = &original_lines[i]
+                    err_code = native_sha256sum(hasher, nstring.data, nstring.size, original_hashes[i])
+                    if not err_code:
+                        failure = True
+                        break
+                if not failure:
+                    for i in range(<int> revised_size):
+                        nstring = &revised_lines[i]
+                        err_code = native_sha256sum(hasher, nstring.data, nstring.size, revised_hashes[i])
+                        if not err_code:
+                            failure = True
+                            break
+            if failure:
+                raise RuntimeError(hasher_error_msg(hasher_error_code))
         path = build_path(allocator, original_hashes, original_size, revised_hashes, revised_size)
         if not path:
             raise MemoryError()
@@ -45,11 +105,18 @@ cpdef native_diff(original, revised):
     finally:
         free(original_hashes)
         free(revised_hashes)
+        IF not USE_HASHLIB:
+            free(original_lines)
+            free(revised_lines)
+            if hasher:
+                destroy_hasher(hasher)
 
-cdef DiffNode* build_path(NodeAllocator allocator, char[32] *original_hashes, size_t original_size, char[32] *revised_hashes, size_t revised_size):
-    cdef size_t max_size = original_size + revised_size + 1
-    cdef size_t size = 1 + 2 * max_size
-    cdef size_t middle = size // 2
+cdef DiffNode* build_path(NodeAllocator allocator, char[32] *original_hashes, int original_size, char[32] *revised_hashes, int revised_size):
+    assert original_size >= 0 and revised_size >= 0
+    cdef int max_size = original_size + revised_size + 1
+    cdef int size = 1 + 2 * max_size
+    cdef int middle = size // 2
+    assert max_size >= 0 and size >= 0 and middle >= 0
     # NOTE: Must use calloc to initialize to null
     # Also, we need to make sure this is an array of POINTERS, since that's what the allocator hands out
     cdef DiffNode **diagonal = <DiffNode**> calloc(size, sizeof(DiffNode*))
@@ -231,9 +298,29 @@ cdef struct DiffNode:
     DiffNode *prev
     bint snake
 
-cdef void sha256sum(const char *data, char* out):
-    m = hashlib.sha256()
-    m.update(data)
-    resultobj = m.digest()
-    cdef char *result = resultobj
-    memcpy(out, result, 32)
+cdef inline int hashlib_sha256sum(const char *data, size_t size, char* out) except 0:
+    IF USE_HASHLIB:
+        m = hashlib.sha256()
+        m.update(data[:size])
+        resultobj = m.digest()
+        cdef char *result = resultobj
+        memmove(out, result, 32)
+        return 1
+    ELSE:
+        raise AssertionError()
+
+cdef inline int native_sha256sum(void *state, const char *data, size_t size, char* out) nogil:
+    IF not USE_HASHLIB:
+        cdef ShaHasher *hasher = <ShaHasher*> state
+        cdef int result = 1
+        result &= update_hasher(hasher, data, size)
+        cdef int actual_size = 0
+        result &= finish_hasher(hasher, out, &actual_size)
+        if actual_size != 32:
+            return 0
+        result &= reset_hasher(hasher)
+        if not result:
+            return 0
+        return 1
+    ELSE:
+        return 0

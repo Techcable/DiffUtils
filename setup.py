@@ -4,13 +4,14 @@ from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 import os
+import sys
 
 debug_str = os.getenv('DEBUG')
 if debug_str is None:
     debug = False
 else:
     debug = debug_str.lower() not in ("false", "no", "n")
-compile_args = ["-w"]  # NOTE: -w disables warnings since we can't do anything about them
+compile_args = ["-Wall", "-Werror"]
 if debug:
     # Enable debug optimizations and debug info
     compile_args.extend(("-Og", "-g"))
@@ -23,9 +24,35 @@ else:
         opt_level = '3'
     compile_args.append(f"-O{opt_level}")
 
+hash_impl = os.getenv("HASH_IMPL")
+if hash_impl is None:
+    if sys.platform == "linux" or 'bsd' in sys.platform:
+        # Default to openssl on linux and bsd, where it's included by default
+        # and kept up to date and secure.
+        hash_impl = "openssl"
+    else:
+        # Fallback to hashlib on all other systems, since openssl either isn't included (windows),
+        # or it uses an outdated and insecure version (mac).
+        hash_impl = "hashlib"
+extra_sources, libraries, compile_time_env = [], [], {}
+if hash_impl in ("openssl",):
+    compile_time_env["USE_HASHLIB"] = 0
+    extra_sources.append("diffutils/_native/hashing/shared_hasher.c")
+    if hash_impl == "openssl":
+        print("Using accelerated OpenSSL hashing")
+        extra_sources.append("diffutils/_native/hashing/openssl_hasher.c")
+        libraries.extend(["dl", "crypto"])
+    else:
+        raise AssertionError(hash_impl)
+elif hash_impl == "hashlib":
+    print("Using fallback hashlib hashing")
+    compile_time_env["USE_HASHLIB"] = 1
+else:
+    raise AssertionError(f"Unknown hash impl: {hash_impl}")
+
 setup(
     name='diffutils',
-    version='1.0.6',
+    version='1.0.7.dev0',
     description='A python diff/patch library, with support for unified diffs and a native diff implementation',
     author='Techcable',
     author_email='Techcable@outlook.com',
@@ -34,9 +61,11 @@ setup(
     ext_modules=cythonize(
         Extension(
             "diffutils._native.myers",
-            ["diffutils/_native/myers.pyx"],
-            extra_compile_args=compile_args
+            sources=["diffutils/_native/myers.pyx", *extra_sources],
+            extra_compile_args=compile_args,
+            libraries=libraries
         ),
+        compile_time_env=compile_time_env,
         gdb_debug=debug
     ),
     setup_requires=["pytest-runner"],
