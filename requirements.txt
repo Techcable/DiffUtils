@@ -1,1 +1,10 @@
+colorama==0.3.9
 argh==0.26.2
+setuptools==36.4.0
+numpy==1.13.1
+typing==3.6.2
+Cython==0.27.2
+argcomplete==1.9.2
+ordereddict==1.1
+Twisted==17.9.0
+zope==4.0b2
