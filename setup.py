@@ -11,7 +11,8 @@ if debug_str is None:
     debug = False
 else:
     debug = debug_str.lower() not in ("false", "no", "n")
-compile_args = ["-Wall", "-Werror"]
+# NOTE: Cython isn't nessicarrily warning-free -_-
+compile_args = []
 if debug:
     # Enable debug optimizations and debug info
     compile_args.extend(("-Og", "-g"))
