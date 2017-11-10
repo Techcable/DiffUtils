@@ -20,8 +20,8 @@ bench_methods = {
         """\
         patch = diff(original_lines, revised_lines)
         unified_diff = tuple(generate_unified_diff(
-            f"a/{original_name}",
-            f"b/{revised_name}",
+            "a/{}".format(original_name),
+            "b/{}".format(revised_name),
             original_lines,
             patch
         ))
@@ -37,8 +37,8 @@ bench_methods = {
         """\
         # NOTE: Must use list to consume the generator's output
         list(generate_unified_diff(
-            f"a/{original_name}",
-            f"b/{revised_name}",
+            "a/{}".format(original_name),
+            "b/{}".format(revised_name),
             original_lines,
             patch
         ))
@@ -68,7 +68,7 @@ def test_data_lines(name, data_dir="data"):
         return cache[name]
     except KeyError:
         result = []
-        with open(f"{data_dir}/{name}", "rt") as f:
+        with open("{}/{}".format(data_dir, name), "rt") as f:
             for line in f:
                 result.append(line.rstrip("\r\n"))
         cache[name] = result
@@ -81,7 +81,7 @@ def main():
     parser.add_argument('targets', nargs='+', choices=[*available_targets, "all"], help="The items to benchmark")
     parser.add_argument('--iterations', '-i', default=10, help="The number of benchmark iterations to perform on each")
     parser.add_argument('--repeat', '-r', default=3, help="The number of times to repeat the benchmark")
-    parser.add_argument('--data-dir', dest='data_dir', default=f"{dirname(__file__)}/data", help="The location of the benchmarking data")
+    parser.add_argument('--data-dir', dest='data_dir', default="{}/data".format(dirname(__file__)), help="The location of the benchmarking data")
     args = parser.parse_args()
     iterations = args.iterations
     repeat = args.repeat
@@ -109,7 +109,7 @@ def main():
             for local_param in ("original_name", "revised_name", "original_lines", "revised_lines"):
                 existing_value = bench_env.get(local_param)
                 if existing_value is not None:
-                    raise AssertionError(f"{local_param} already present: {repr(existing_value)}")
+                    raise AssertionError("{} already present: {}".format(local_param, repr(existing_value)))
                 bench_env[local_param] = locals()[local_param]
 
             def run_bench(bench_env, engine_name=None):
@@ -117,16 +117,16 @@ def main():
                 try:
                     result = min(timer.repeat(repeat=repeat, number=iterations))
                 except Exception:
-                    message = f"Unable to run {target} between {original_name} and {revised_name}"
+                    message = "Unable to run {} between {} and {}".format(target, original_name, revised_name)
                     if engine_name:
-                        message += f" with {engine_name}"
+                        message += " with {}".format(engine_name)
                     print(message, file=stderr)
                     timer.print_exc()
                     exit(1)
                 result *= 1000
-                message = f"{padded_target}  {result:.3f} ms -- {original_name} and {revised_name}"
+                message = "{}  {:.3f} ms -- {} and {}".format(padded_target, result, original_name, revised_name)
                 if engine_name:
-                    message += f" with {engine_name}"
+                    message += " with {}".format(engine_name)
                 print(message)
 
             assert 'engine' not in bench_env, "engine already present: " + repr(bench_env['engine'])

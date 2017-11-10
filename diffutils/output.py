@@ -16,8 +16,6 @@ from typing import Iterator, List
 
 
 class UnifiedDiffOutput:
-    buffer: List[str]
-
     def __init__(self):
         self.buffer = list()
 

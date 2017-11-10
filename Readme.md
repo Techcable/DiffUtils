@@ -1,6 +1,6 @@
-DiffUtils
+DiffUtils ![pypi version](https://img.shields.io/pypi/v/diffutils.svg) ![supported versions](https://img.shields.io/pypi/pyversions/diffutils.svg) ![wheel](https://img.shields.io/pypi/wheel/Django.svg)
 =========
-A python diff/patch library supporting unified diffs and with a native diff implementation
+A python diff/patch library supporting unified diffs and native acceleration.
 
 ## Features
 - Myers diff algorithm
@@ -8,10 +8,13 @@ A python diff/patch library supporting unified diffs and with a native diff impl
 - Native diff implementation
   - Native implementation is 10 times faster than the pure-python version
   - A native patch implementation is unneeded since the patch operation is already very fast
-  - Precompiled wheels available
+  - Precompiled wheels available for Linux on officially supported python versions
+    - Some wheels are made available for Windows and Mac, but there are no guarantees.
+- Highly descriptive error messages
 - Supports parsing/outputting unified diffs
 - Command line interface included
   - Supports recursively diffing/patching entire directory trees
+
 
 ## Credits
 - Dmitry Naumenko (dm.naumenko@gmail.com) - Java Version

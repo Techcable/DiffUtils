@@ -179,7 +179,9 @@ class Chunk:
             actual = target[index]
             if actual != expected:
                 raise PatchFailedException(
-                    f"Incorrect Chunk: the chunk content {repr(expected)} doesn't match the target {repr(actual)} at {index}"
+                    "Incorrect Chunk: the chunk content {} doesn't match the target {} at {}".format(
+                        repr(expected), repr(actual), index
+                    )
                 )
 
     def __len__(self):
@@ -211,7 +213,6 @@ class Chunk:
 class Patch:
     """A patch holding all deltas between the original and revised texts."""
     __slots__ = "_deltas"
-    _deltas: Union[Tuple[Delta, ...], List[Delta]]
 
     def __init__(self):
         self._deltas = list()

@@ -34,11 +34,11 @@ class MyersEngine(DiffEngine):
 
     def diff(self, original, revised):
         if type(original) is not list:
-            raise TypeError(f"Original must be a list, not a {type(original)}")
+            raise TypeError("Original must be a list: {!r}".format(original))
         if type(revised) is not list:
-            raise TypeError(f"Revised must be a list, not a {type(revised)}")
-        original_hashes: List[bytes] = None
-        revised_hashes: List[bytes] = None
+            raise TypeError("Revised must be a list: {!r}".format(revised))
+        original_hashes = None  # type: list[bytes]
+        revised_hashes = None  # type: list[bytes]
         if self.hash_optimization:
             # Since build_path actually doesn't need the elements themselves, we can take their sha256sum to speed up comparison
             # This can improve performance noticably, since hashes usually differ in the first few bytes and there are only 32 bytes at most
@@ -90,7 +90,7 @@ def build_path(original: List[T], revised: List[T]) -> "DiffNode":
     max_size = original_size + revised_size + 1
     size = 1 + 2 * max_size
     middle = size // 2
-    diagonal: List[Optional["DiffNode"]] = [None] * size
+    diagonal = [None] * size  # type: list[Optional["DiffNode"]]
 
     diagonal[middle + 1] = create_snake(0, -1, None)
     for d in range(max_size):
@@ -177,13 +177,14 @@ class DiffNode:
     DiffNodes and Snakes allow for compression of diffpaths,
     because each snake is represented by a single Snake node
     and each contiguous series of insertions and deletions is represented by a DiffNode.
+    
+    :type i: int
+    :type j: int
+    :type lastSnake: Optional["DiffNode"]
+    :type prev: Optional["DiffNode"]
+    :type snake: bool
     """
     __slots__ = "i", "j", "lastSnake", "snake", "prev"
-    i: int
-    j: int
-    lastSnake: Optional["DiffNode"]
-    prev: Optional["DiffNode"]
-    snake: bool
 
     def __init__(self, i, j):
         """

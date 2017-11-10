@@ -88,13 +88,13 @@ class PatchFormatError(Exception):
         self.line = line
 
     def __str__(self):
-        return f"{self.message} on line {self.line_number}"
+        return "{} on line {}".format(self.message, self.line_number)
 
 
 class PatchFormatWarning(Warning, PatchFormatError):
     def __init__(self, message, line_number, line):
         PatchFormatError.__init__(self, message, line_number, line)
-        assert hasattr(self, 'message'), f"Missing message: {dir(self)}"
+        assert hasattr(self, 'message'), "Missing message: {}".format(dir(self))
 
 
 def parse_unified_diff(text, lenient=False):
@@ -124,8 +124,8 @@ def parse_unified_diff(text, lenient=False):
 
     def process_chunk(chunk, offset, expected_original, expected_revised):
         assert offset is not None
-        assert type(expected_original) is int, f"Invalid expected_original type: {type(expected_original)}"
-        assert type(expected_revised) is int, f"Invalid expected_revised type: {type(expected_revised)}"
+        assert type(expected_original) is int, "Invalid expected_original type: {}".format(type(expected_original))
+        assert type(expected_revised) is int, "Invalid expected_revised type: {}".format(type(expected_revised))
         original_lines, revised_lines = [], []
 
         for line in chunk:
@@ -140,21 +140,21 @@ def parse_unified_diff(text, lenient=False):
                 original_lines.append(rest)
             else:
                 # Shouldnt've gotten this far
-                raise AssertionError(f"Invalid tag got too far: {tag}")
+                raise AssertionError("Invalid tag got too far: {}".format(tag))
         actual_original, actual_revised = len(original_lines), len(revised_lines)
         if expected_original != actual_original:
             # Sometimes str(expected_original) == str(actual_original) for different numbers!
-            assert str(expected_original) != str(actual_original), f"{repr(expected_original)}, {repr(actual_original)}"
+            assert str(expected_original) != str(actual_original), "{}, {}".format(repr(expected_original), repr(actual_original))
             report_error(
-                message=f"Expected {expected_original} original lines, but got {actual_original}",
+                message="Expected {} original lines, but got {}".format(expected_original, actual_original),
                 line_number=offset - 1,
                 line=text[offset - 2]
             )
         if expected_revised != actual_revised:
             # Sometimes str(expected_revised) == str(actual_revised) for different numbers!
-            assert str(expected_revised) != str(actual_revised), f"{repr(expected_revised)}, {repr(actual_revised)}"
+            assert str(expected_revised) != str(actual_revised), "{}, {}".format(repr(expected_revised), repr(actual_revised))
             report_error(
-                message=f"Expected {expected_revised} revised lines, but got {actual_revised}",
+                message="Expected {} revised lines, but got {}".format(expected_revised, actual_revised),
                 line_number=offset - 1,
                 line=text[offset - 2]
             )
@@ -167,7 +167,7 @@ def parse_unified_diff(text, lenient=False):
         line_number = index + 1  # Indexes start at zero, linenos start at 1
         if not lenient and '\n' in line:
             report_error(
-                message=f"Line contained newline",
+                message="Line contained newline",
                 line_number=line_number,
                 line=line
             )
@@ -211,7 +211,7 @@ def parse_unified_diff(text, lenient=False):
                     raw_chunk.append(tag + rest)
                 else:
                     report_error(
-                        message=f"Invalid tag {tag}",
+                        message="Invalid tag {}".format(actual_revised),
                         line_number=line_number,
                         line=line
                     )

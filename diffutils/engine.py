@@ -49,7 +49,7 @@ class DiffEngine(metaclass=ABCMeta):
             result.append(word[1:].lower())
         return ''.join(result) + "DiffEngine"
 
-    INSTANCE: "DiffEngine"
+    INSTANCE = None  # type: DiffEngine
 
     @staticmethod
     def available_engines() -> Sequence["DiffEngine"]:
@@ -71,7 +71,7 @@ class DiffEngine(metaclass=ABCMeta):
     @staticmethod
     def create(name=None, hash_optimization=True):
         if name is not None and name not in ('native', 'plain', 'native-myers', 'plain-myers'):
-            raise ValueError(f"Unknown engine: {name}")
+            raise ValueError("Unknown engine: {}".format(name))
         if name is None or name in ('native', 'native-myers'):
             try:
                 from ._native.myers import native_diff

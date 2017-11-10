@@ -22,7 +22,7 @@ else:
         # They benchmark at 64.2, 52.2, and 52.6 ms respectively
         # Therefore, we'll just stick with -O2 as -O3 is a negligable speedup
         opt_level = '3'
-    compile_args.append(f"-O{opt_level}")
+    compile_args.append("-O{}".format(opt_level))
 
 hash_impl = os.getenv("HASH_IMPL")
 if hash_impl is None:
@@ -48,11 +48,11 @@ elif hash_impl == "hashlib":
     print("Using fallback hashlib hashing")
     compile_time_env["USE_HASHLIB"] = 1
 else:
-    raise AssertionError(f"Unknown hash impl: {hash_impl}")
+    raise AssertionError("Unknown hash impl: {}".format(hash_impl))
 
 setup(
     name='diffutils',
-    version='1.0.7.dev0',
+    version='1.0.7',
     description='A python diff/patch library, with support for unified diffs and a native diff implementation',
     author='Techcable',
     author_email='Techcable@outlook.com',
@@ -68,6 +68,13 @@ setup(
         compile_time_env=compile_time_env,
         gdb_debug=debug
     ),
+    keywords="diff patch myers"
+    license="MIT",
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+    ]
     setup_requires=["pytest-runner"],
     tests_require=["pytest"]
 )
