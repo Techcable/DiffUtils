@@ -16,3 +16,5 @@ deploy:
   on:
     tags: true
 cache: pip
+compiler: clang
+
