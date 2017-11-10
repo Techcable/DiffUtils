@@ -6,8 +6,7 @@ install:
 - pip install -r requirements.txt
 - pip install .
 script:
-- ./setup.py build
-- ./setup.py test
+- pytest
 deploy:
   provider: pypi
   user: Techcable
@@ -16,5 +15,12 @@ deploy:
   on:
     tags: true
 cache: pip
-compiler: clang
+- os: linux
+   addons:
+     apt:
+       sources:
+       - ubuntu-toolchain-r-test
+       packages:
+       - gcc-7
+   - MATRIX_EVAL="CC=gcc-7"
 
