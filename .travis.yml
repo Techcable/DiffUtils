@@ -6,7 +6,8 @@ install:
 - pip install -r requirements.txt
 - pip install .
 script:
-- pytest
+- ./setup.py build
+- ./setup.py test
 deploy:
   provider: pypi
   user: Techcable
