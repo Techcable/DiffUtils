@@ -68,7 +68,7 @@ setup(
         compile_time_env=compile_time_env,
         gdb_debug=debug
     ),
-    keywords="diff patch myers"
+    keywords="diff patch myers",
     license="MIT",
     classifiers=[
         'License :: OSI Approved :: MIT License',
