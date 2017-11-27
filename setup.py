@@ -68,13 +68,13 @@ setup(
         compile_time_env=compile_time_env,
         gdb_debug=debug
     ),
-    keywords="diff patch myers"
+    keywords="diff patch myers",
     license="MIT",
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
-    ]
+    ],
     setup_requires=["pytest-runner"],
     tests_require=["pytest"]
 )

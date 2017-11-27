@@ -46,7 +46,7 @@ def diff(original, revised):
     if isinstance(original, str):
         original = original.splitlines()
     if isinstance(revised, str):
-        original = original.splitlines()
+        revised = revised.splitlines()
     patch = DiffEngine.INSTANCE.diff(original, revised)
     if not patch.deltas:
         return None
