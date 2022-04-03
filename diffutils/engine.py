@@ -44,7 +44,7 @@ class DiffEngine(metaclass=ABCMeta):
     def __repr__(self) -> str:
         import re
         result = []
-        for word in re.split('[-_\s]', self.name):
+        for word in re.split(r'[-_\s]', self.name):
             result.append(word[0].upper())
             result.append(word[1:].lower())
         return ''.join(result) + "DiffEngine"
