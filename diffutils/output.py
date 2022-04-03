@@ -20,13 +20,13 @@ class UnifiedDiffOutput:
         self.buffer = list()
 
     def add_context_line(self, line):
-        self._write(' ', line)
+        self._write(" ", line)
 
     def add_remove_line(self, line):
-        self._write('-', line)
+        self._write("-", line)
 
     def add_insert_line(self, line):
-        self._write('+', line)
+        self._write("+", line)
 
     def _write(self, prefix, line):
         line = prefix + line
@@ -39,7 +39,9 @@ class UnifiedDiffOutput:
             self.add_insert_line(line)
 
 
-def generate_unified_diff(original_file, revised_file, original_lines, patch, context_size=5) -> Iterator[str]:
+def generate_unified_diff(
+    original_file, revised_file, original_lines, patch, context_size=5
+) -> Iterator[str]:
     """
     A generator that converts the patch into unified diff format
 
@@ -59,13 +61,18 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
     yield "+++ " + revised_file
 
     delta = deltas[0]
-    delta_batch = [delta]  # Deltas are batched together and are output together, to get rid of redundant context
+    delta_batch = [
+        delta
+    ]  # Deltas are batched together and are output together, to get rid of redundant context
 
     if len(deltas) != 1:
         for next_delta in deltas[1:]:
             position = delta.original.position
 
-            if position + len(delta.original.lines) + context_size >= next_delta.original.position - context_size:
+            if (
+                position + len(delta.original.lines) + context_size
+                >= next_delta.original.position - context_size
+            ):
                 delta_batch.append(next_delta)
             else:
                 yield from process_deltas(original_lines, delta_batch, context_size)
@@ -93,7 +100,7 @@ def process_deltas(original_lines, deltas, context_size):
     context_start = max(0, delta.original.position - context_size)
 
     # Output the context before the first delta
-    for line in original_lines[context_start:delta.original.position]:
+    for line in original_lines[context_start : delta.original.position]:
         buffer.add_context_line(line)
         original_total += 1
         revised_total += 1
@@ -115,10 +122,24 @@ def process_deltas(original_lines, deltas, context_size):
         delta = next_delta
 
     context_start = delta.original.position + len(delta.original)
-    for lineIndex in range(context_start, min(context_start + context_size, len(original_lines))):
+    for lineIndex in range(
+        context_start, min(context_start + context_size, len(original_lines))
+    ):
         buffer.add_context_line(original_lines[lineIndex])
         original_total += 1
         revised_total += 1
 
-    yield ''.join(["@@ -", str(original_start), ",", str(original_total), " +", str(revised_start), ",", str(revised_total), " @@"])
+    yield "".join(
+        [
+            "@@ -",
+            str(original_start),
+            ",",
+            str(original_total),
+            " +",
+            str(revised_start),
+            ",",
+            str(revised_total),
+            " @@",
+        ]
+    )
     yield from buffer.buffer

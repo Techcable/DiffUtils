@@ -6,7 +6,7 @@ from Cython.Build import cythonize
 import os
 import sys
 
-debug_str = os.getenv('DEBUG')
+debug_str = os.getenv("DEBUG")
 if debug_str is None:
     debug = False
 else:
@@ -21,12 +21,12 @@ else:
         # NOTE: -Os, -O2, and -O3 are 200K, 312K, and 320K respectively
         # They benchmark at 64.2, 52.2, and 52.6 ms respectively
         # Therefore, we'll just stick with -O2 as -O3 is a negligable speedup
-        opt_level = '3'
+        opt_level = "3"
     compile_args.append("-O{}".format(opt_level))
 
 hash_impl = os.getenv("HASH_IMPL")
 if hash_impl is None:
-    if sys.platform == "linux" or 'bsd' in sys.platform:
+    if sys.platform == "linux" or "bsd" in sys.platform:
         # Default to openssl on linux and bsd, where it's included by default
         # and kept up to date and secure.
         hash_impl = "openssl"
@@ -51,11 +51,11 @@ else:
     raise AssertionError("Unknown hash impl: {}".format(hash_impl))
 
 setup(
-    name='diffutils',
-    version='1.0.7',
-    description='A python diff/patch library, with support for unified diffs and a native diff implementation',
-    author='Techcable',
-    author_email='Techcable@outlook.com',
+    name="diffutils",
+    version="1.0.7",
+    description="A python diff/patch library, with support for unified diffs and a native diff implementation",
+    author="Techcable",
+    author_email="Techcable@outlook.com",
     packages=find_packages(include="diffutils*"),
     requires=["argh"],
     ext_modules=cythonize(
@@ -63,18 +63,18 @@ setup(
             "diffutils._native.myers",
             sources=["diffutils/_native/myers.pyx", *extra_sources],
             extra_compile_args=compile_args,
-            libraries=libraries
+            libraries=libraries,
         ),
         compile_time_env=compile_time_env,
-        gdb_debug=debug
+        gdb_debug=debug,
     ),
     keywords="diff patch myers",
     license="MIT",
     classifiers=[
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
     setup_requires=["pytest-runner"],
-    tests_require=["pytest"]
+    tests_require=["pytest"],
 )

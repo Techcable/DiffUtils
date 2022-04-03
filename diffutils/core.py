@@ -19,16 +19,12 @@ import operator
 
 """Internal Code"""
 
-__all__ = (
-    "Delta",
-    "Chunk",
-    "Patch",
-    "PatchFailedException"
-)
+__all__ = ("Delta", "Chunk", "Patch", "PatchFailedException")
 
 
 class Delta(metaclass=ABCMeta):
     """Describes the delta between original and revised texts."""
+
     __slots__ = "original", "revised"
 
     class Type(Enum):
@@ -66,7 +62,9 @@ class Delta(metaclass=ABCMeta):
         if original:
             original.verify(target)
         if revised and original.position > len(target):
-            raise PatchFailedException("Incorrect patch for delta: delta original position > target size")
+            raise PatchFailedException(
+                "Incorrect patch for delta: delta original position > target size"
+            )
 
     def apply_to(self, target):
         """
@@ -82,7 +80,7 @@ class Delta(metaclass=ABCMeta):
         if original:
             # NOTE: This was a call to remove in a loop, which was O(n^2)
             # In my deffense I didn't understand slicing, so I didn't know how to do it fast
-            del target[position:position + size]
+            del target[position : position + size]
         if revised:
             # NOTE: This was a call to insert in a loop, which was O(n^2)
             # In my defense I didn't understand slicing, so I didn't know how to do it fast
@@ -157,6 +155,7 @@ class InsertDelta(Delta):
 
 class Chunk:
     """Holds the information about the part of text involved in the diff process"""
+
     __slots__ = "position", "lines"
 
     def __init__(self, position, lines):
@@ -172,7 +171,9 @@ class Chunk:
         :exception PatchFailedException: If doesn't match
         """
         if self.last > len(target):
-            raise PatchFailedException("Incorrect Chunk: the position of chunk > target size")
+            raise PatchFailedException(
+                "Incorrect Chunk: the position of chunk > target size"
+            )
         position = self.position
         for (offset, expected) in enumerate(self.lines):
             index = position + offset
@@ -212,6 +213,7 @@ class Chunk:
 
 class Patch:
     """A patch holding all deltas between the original and revised texts."""
+
     __slots__ = "_deltas"
 
     def __init__(self):
@@ -266,7 +268,7 @@ class Patch:
         deltas = self._deltas
         if type(deltas) is not tuple:
             # NOTE: Mypy is stupid and doesn't recognize our speed hack
-            deltas.sort(key=operator.attrgetter('original.position'))  # type: ignore
+            deltas.sort(key=operator.attrgetter("original.position"))  # type: ignore
             self._deltas = deltas = tuple(deltas)
         return deltas  # type: ignore
 

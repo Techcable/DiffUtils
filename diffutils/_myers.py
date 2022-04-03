@@ -30,7 +30,7 @@ class MyersEngine(DiffEngine):
 
     @property
     def name(self):
-        return 'plain_myers'
+        return "plain_myers"
 
     def diff(self, original, revised):
         if type(original) is not list:
@@ -48,7 +48,7 @@ class MyersEngine(DiffEngine):
                     original_hashes, revised_hashes = None, None
                     break
                 h = hashlib.sha256()
-                h.update(element.encode('utf-8'))
+                h.update(element.encode("utf-8"))
                 original_hashes.append(h.digest())
         if original_hashes is not None:
             revised_hashes = []
@@ -57,7 +57,7 @@ class MyersEngine(DiffEngine):
                     original_hashes, revised_hashes = None, None
                     break
                 h = hashlib.sha256()
-                h.update(element.encode('utf-8'))
+                h.update(element.encode("utf-8"))
                 revised_hashes.append(h.digest())
         if original_hashes is not None:
             path = build_path(original_hashes, revised_hashes)
@@ -177,13 +177,14 @@ class DiffNode:
     DiffNodes and Snakes allow for compression of diffpaths,
     because each snake is represented by a single Snake node
     and each contiguous series of insertions and deletions is represented by a DiffNode.
-    
+
     :type i: int
     :type j: int
     :type lastSnake: Optional["DiffNode"]
     :type prev: Optional["DiffNode"]
     :type snake: bool
     """
+
     __slots__ = "i", "j", "lastSnake", "snake", "prev"
 
     def __init__(self, i, j):

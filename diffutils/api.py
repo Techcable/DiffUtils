@@ -27,12 +27,14 @@ __all__ = (
     "PatchFormatError",
     "PatchFormatWarning",
     "parse_unified_diff",
-    "generate_unified_diff"
+    "generate_unified_diff",
 )
 
 """The public API for DiffUtils"""
 
-__unifiedDiffChunkRe = re.compile("^@@\\s+-(?:(\\d+)(?:,(\\d+))?)\\s+\\+(?:(\\d+)(?:,(\\d+))?)\\s+@@$")
+__unifiedDiffChunkRe = re.compile(
+    "^@@\\s+-(?:(\\d+)(?:,(\\d+))?)\\s+\\+(?:(\\d+)(?:,(\\d+))?)\\s+@@$"
+)
 
 
 def diff(original, revised):
@@ -94,7 +96,7 @@ class PatchFormatError(Exception):
 class PatchFormatWarning(Warning, PatchFormatError):
     def __init__(self, message, line_number, line):
         PatchFormatError.__init__(self, message, line_number, line)
-        assert hasattr(self, 'message'), "Missing message: {}".format(dir(self))
+        assert hasattr(self, "message"), "Missing message: {}".format(dir(self))
 
 
 def parse_unified_diff(text, lenient=False):
@@ -114,6 +116,7 @@ def parse_unified_diff(text, lenient=False):
             warnings.warn(PatchFormatWarning(message, line_number, line))
         else:
             raise PatchFormatError(message, line_number, line)
+
     in_prelude = True
     raw_chunk = []
     patch = Patch()
@@ -124,19 +127,23 @@ def parse_unified_diff(text, lenient=False):
 
     def process_chunk(chunk, offset, expected_original, expected_revised):
         assert offset is not None
-        assert type(expected_original) is int, "Invalid expected_original type: {}".format(type(expected_original))
-        assert type(expected_revised) is int, "Invalid expected_revised type: {}".format(type(expected_revised))
+        assert (
+            type(expected_original) is int
+        ), "Invalid expected_original type: {}".format(type(expected_original))
+        assert (
+            type(expected_revised) is int
+        ), "Invalid expected_revised type: {}".format(type(expected_revised))
         original_lines, revised_lines = [], []
 
         for line in chunk:
             tag = line[:1]
             rest = line[1:]
-            if tag == ' ':
+            if tag == " ":
                 revised_lines.append(rest)
                 original_lines.append(rest)
-            elif tag == '+':
+            elif tag == "+":
                 revised_lines.append(rest)
-            elif tag == '-':
+            elif tag == "-":
                 original_lines.append(rest)
             else:
                 # Shouldnt've gotten this far
@@ -144,32 +151,40 @@ def parse_unified_diff(text, lenient=False):
         actual_original, actual_revised = len(original_lines), len(revised_lines)
         if expected_original != actual_original:
             # Sometimes str(expected_original) == str(actual_original) for different numbers!
-            assert str(expected_original) != str(actual_original), "{}, {}".format(repr(expected_original), repr(actual_original))
+            assert str(expected_original) != str(actual_original), "{}, {}".format(
+                repr(expected_original), repr(actual_original)
+            )
             report_error(
-                message="Expected {} original lines, but got {}".format(expected_original, actual_original),
+                message="Expected {} original lines, but got {}".format(
+                    expected_original, actual_original
+                ),
                 line_number=offset - 1,
-                line=text[offset - 2]
+                line=text[offset - 2],
             )
         if expected_revised != actual_revised:
             # Sometimes str(expected_revised) == str(actual_revised) for different numbers!
-            assert str(expected_revised) != str(actual_revised), "{}, {}".format(repr(expected_revised), repr(actual_revised))
-            report_error(
-                message="Expected {} revised lines, but got {}".format(expected_revised, actual_revised),
-                line_number=offset - 1,
-                line=text[offset - 2]
+            assert str(expected_revised) != str(actual_revised), "{}, {}".format(
+                repr(expected_revised), repr(actual_revised)
             )
-        for delta in DiffEngine.INSTANCE.diff_chunks(Chunk(old_ln - 1, original_lines), Chunk(new_ln - 1, revised_lines)):
+            report_error(
+                message="Expected {} revised lines, but got {}".format(
+                    expected_revised, actual_revised
+                ),
+                line_number=offset - 1,
+                line=text[offset - 2],
+            )
+        for delta in DiffEngine.INSTANCE.diff_chunks(
+            Chunk(old_ln - 1, original_lines), Chunk(new_ln - 1, revised_lines)
+        ):
             patch.add_delta(delta)
         del chunk[:]
 
     expected_original, expected_revised = None, None
     for index, line in enumerate(text):
         line_number = index + 1  # Indexes start at zero, linenos start at 1
-        if not lenient and '\n' in line:
+        if not lenient and "\n" in line:
             report_error(
-                message="Line contained newline",
-                line_number=line_number,
-                line=line
+                message="Line contained newline", line_number=line_number, line=line
             )
         if in_prelude:
             # Skip leading lines until after we've seen one starting with '+++'
@@ -181,7 +196,9 @@ def parse_unified_diff(text, lenient=False):
         if match is not None:  # A match is found
             if raw_chunk:
                 # Process the lines in the previous chunk
-                process_chunk(raw_chunk, chunk_offset, expected_original, expected_revised)
+                process_chunk(
+                    raw_chunk, chunk_offset, expected_original, expected_revised
+                )
                 chunk_offset = None  # Clear the offset
             # Parse the @@ header
             if match.group(1) is None:
@@ -207,23 +224,25 @@ def parse_unified_diff(text, lenient=False):
             if line:
                 tag = line[:1]
                 rest = line[1:]
-                if tag in (' ', '+', '-'):
+                if tag in (" ", "+", "-"):
                     raw_chunk.append(tag + rest)
                 else:
                     report_error(
                         message="Invalid tag {}".format(actual_revised),
                         line_number=line_number,
-                        line=line
+                        line=line,
                     )
             else:
-                raw_chunk.append(' ')
+                raw_chunk.append(" ")
     # Process the lines in the final chunk
     process_chunk(raw_chunk, chunk_offset, expected_original, expected_revised)
 
     return patch
 
 
-def generate_unified_diff(original_file, revised_file, original_lines, patch, context_size=3):
+def generate_unified_diff(
+    original_file, revised_file, original_lines, patch, context_size=3
+):
     """
     Convert the patch into unified diff format
 
@@ -234,4 +253,6 @@ def generate_unified_diff(original_file, revised_file, original_lines, patch, co
     :param context_size: the number of context lines to put around each difference
     :return: the patch as a list of lines in unified diff format
     """
-    return output.generate_unified_diff(original_file, revised_file, original_lines, patch, context_size)
+    return output.generate_unified_diff(
+        original_file, revised_file, original_lines, patch, context_size
+    )
