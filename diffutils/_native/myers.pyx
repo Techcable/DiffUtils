@@ -1,8 +1,10 @@
+from ..core import Chunk, Delta, Patch
 from ..engine import DiffEngine
-from ..core import Delta, Patch, Chunk
-from libc.stdlib cimport malloc, free, calloc, realloc, abort
-from libc.string cimport memcmp, memmove
+
 from cpython cimport array
+from libc.stdlib cimport abort, calloc, free, malloc, realloc
+from libc.string cimport memcmp, memmove
+
 IF USE_HASHLIB:
     import hashlib
     from hasher cimport ShaHasher

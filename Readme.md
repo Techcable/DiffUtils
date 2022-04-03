@@ -1,4 +1,4 @@
-DiffUtils ![pypi version](https://img.shields.io/pypi/v/diffutils.svg) ![supported versions](https://img.shields.io/pypi/pyversions/diffutils.svg) ![wheel](https://img.shields.io/pypi/wheel/Django.svg) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://black.readthedocs.io/en/stable/)
+DiffUtils ![pypi version](https://img.shields.io/pypi/v/diffutils.svg) ![supported versions](https://img.shields.io/pypi/pyversions/diffutils.svg) ![wheel](https://img.shields.io/pypi/wheel/Django.svg) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://black.readthedocs.io/en/stable/) [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 =========
 A python diff/patch library supporting unified diffs and native acceleration.
 

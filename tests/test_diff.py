@@ -1,4 +1,5 @@
 import pytest
+
 import diffutils
 from diffutils.engine import DiffEngine
 

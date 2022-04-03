@@ -1,12 +1,13 @@
+import textwrap
 from argparse import ArgumentParser
 from contextlib import contextmanager
-from timeit import Timer
-from diffutils.api import diff, parse_unified_diff
-from diffutils.output import generate_unified_diff
-from diffutils.engine import DiffEngine
 from os.path import dirname
-import textwrap
-from sys import stderr, exit
+from sys import exit, stderr
+from timeit import Timer
+
+from diffutils.api import diff, parse_unified_diff
+from diffutils.engine import DiffEngine
+from diffutils.output import generate_unified_diff
 
 test_data = [
     (

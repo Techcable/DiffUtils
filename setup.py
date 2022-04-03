@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
-from setuptools.extension import Extension
-from Cython.Build import cythonize
 import os
 import sys
+
+from Cython.Build import cythonize
+from setuptools import find_packages, setup
+from setuptools.extension import Extension
 
 debug_str = os.getenv("DEBUG")
 if debug_str is None:

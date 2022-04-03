@@ -1,12 +1,14 @@
 # NOTE: Must be first import to check version
-import diffutils
-import argh
-from argh import arg, CommandError
-from pathlib import Path
 import os
-from diffutils.output import generate_unified_diff
+from pathlib import Path
+
+import argh
+from argh import CommandError, arg
+
+import diffutils
+from diffutils.api import PatchFailedException, parse_unified_diff
 from diffutils.engine import DiffEngine
-from diffutils.api import parse_unified_diff, PatchFailedException
+from diffutils.output import generate_unified_diff
 
 
 def do_diff(

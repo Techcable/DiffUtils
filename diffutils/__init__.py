@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import print_function
+
 import sys
 
 # Public API Functions
-from .api import diff, patch, undo_patch, parse_unified_diff, generate_unified_diff
+from .api import diff, generate_unified_diff, parse_unified_diff, patch, undo_patch

@@ -18,10 +18,11 @@ A clean-room implementation of <a href="http://www.cs.arizona.edu/people/gene/">
 
 See the paper at http://www.cs.arizona.edu/people/gene/PAPERS/diff.ps
 """
-from .core import Patch, Delta, Chunk
-from .engine import DiffEngine
-from typing import List, Optional, T
 import hashlib
+from typing import List, Optional, T
+
+from .core import Chunk, Delta, Patch
+from .engine import DiffEngine
 
 
 class MyersEngine(DiffEngine):

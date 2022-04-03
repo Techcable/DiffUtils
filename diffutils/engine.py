@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, TypeVar, Sequence
-from .core import Patch, Chunk
+from typing import List, Sequence, TypeVar
+
+from .core import Chunk, Patch
 
 __all__ = "DiffEngine"
 

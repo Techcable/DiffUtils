@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import re
-from . import output
-from diffutils.core import Patch, PatchFailedException, Chunk
-from diffutils.engine import DiffEngine
 import warnings
+
+from diffutils.core import Chunk, Patch, PatchFailedException
+from diffutils.engine import DiffEngine
+
+from . import output
 
 __all__ = (
     "diff",
